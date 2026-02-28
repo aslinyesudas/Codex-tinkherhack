@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="./img.png" alt="Project Banner" width="100%">
+<img width="1280" height="640" alt="image" src="https://github.com/user-attachments/assets/8840a2d0-ef00-4e12-a3b1-3ceaf179d944" />
+ 
 </p>
+
 # SafeRoute 🚨
 
 ## Basic Details
@@ -235,7 +237,18 @@ Tap "ACTIVATE SOS"
 ## Project Demo
 
 ### Video
-[Add your demo video link here]
+
+
+https://github.com/user-attachments/assets/b00d33a4-196f-4fea-bee8-bda7060bc589
+
+
+
+https://github.com/user-attachments/assets/109aa39b-49b2-4195-baae-437f176acdd5
+
+
+
+https://github.com/user-attachments/assets/4aed270e-792b-422e-92cc-3e7dd5f2bd97
+
 
 *Demo shows: GPS lock → SOS activation → reason selection → live breadcrumb trail → family tracker map updating in real-time → automatic email delivery*
 
