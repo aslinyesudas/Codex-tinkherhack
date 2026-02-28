@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>SafeRoute — Live Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #ff2d2d; --red-glow: rgba(255,45,45,0.35);
+      --green: #00ff88; --amber: #ffb703;
+      --bg: #0a0a0f; --bg2: #111118; --bg3: #1a1a24;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8e8f0; --text-dim: rgba(232,232,240,0.45);
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-mono); overflow: hidden; }
+
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* TOP BAR */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(10,10,15,0.92); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-icon { color: var(--red); font-size: 18px; animation: spin 8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .logo-text { font-family: var(--font-head); font-weight: 800; font-size: 18px; }
+    .logo-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 0.15em; margin-top: 1px; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 7px;
+      padding: 5px 12px; border-radius: 100px;
+      font-size: 10px; letter-spacing: 0.12em;
+      transition: all 0.4s;
+    }
+    .live-badge.waiting { background: var(--bg3); border: 1px solid var(--border); color: var(--text-dim); }
+    .live-badge.live { background: rgba(255,45,45,0.15); border: 1px solid var(--red); color: var(--red); }
+    .live-badge.ended { background: rgba(0,255,136,0.1); border: 1px solid var(--green); color: var(--green); }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .live-badge.live .live-dot { animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* MAP */
+    #map {
+      position: fixed; top: 57px; left: 0; right: 0; bottom: 0; z-index: 1;
+    }
+    /* Dark Leaflet tiles override */
+    .leaflet-tile { filter: brightness(0.6) saturate(0.4) hue-rotate(180deg) invert(1); }
+    .leaflet-container { background: #1a1a2e; }
+
+    /* INFO PANEL */
+    .info-panel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+      background: rgba(10,10,15,0.95); backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 16px 20px 28px;
+      transform: translateY(0); transition: transform 0.4s ease;
+    }
+    .info-panel.hidden-panel { transform: translateY(calc(100% - 52px)); }
+
+    .panel-handle {
+      width: 36px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 0 auto 16px; cursor: pointer;
+    }
+
+    .info-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .info-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .info-label { font-size: 9px; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 6px; }
+    .info-value { font-size: 15px; font-weight: 400; color: var(--text); }
+    .info-value.highlight { color: var(--red); font-family: var(--font-head); font-weight: 700; }
+    .info-value.green { color: var(--green); }
+
+    .trail-row {
+      display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .trail-row::-webkit-scrollbar { display: none; }
+    .trail-chip {
+      flex-shrink: 0;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px;
+      font-size: 10px; color: var(--text-dim); white-space: nowrap;
+    }
+    .trail-chip.latest { border-color: rgba(255,45,45,0.4); color: var(--red); }
+
+    .no-session {
+      text-align: center; padding: 40px 20px;
+      font-size: 13px; color: var(--text-dim);
+      line-height: 2;
+    }
+    .no-session strong { color: var(--text); font-family: var(--font-head); font-size: 18px; display: block; margin-bottom: 8px; }
+
+    /* SOS marker pulse */
+    .sos-marker-pulse {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 0 rgba(255,45,45,0.7);
+      animation: sosPulse 1.5s ease-out infinite;
+    }
+    @keyframes sosPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(255,45,45,0.7); }
+      70%  { box-shadow: 0 0 0 20px rgba(255,45,45,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,45,45,0); }
+    }
+    .crumb-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,45,45,0.5); border: 1px solid var(--red);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <header class="topbar">
+    <div class="logo">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="logo-icon">◈</span>
+          <span class="logo-text">SafeRoute</span>
+        </div>
+        <div class="logo-sub">LIVE TRACKER</div>
+      </div>
+    </div>
+    <div class="live-badge waiting" id="liveBadge">
+      <span class="live-dot"></span>
+      <span id="liveText">WAITING</span>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <!-- Info Panel -->
+  <div class="info-panel" id="infoPanel">
+    <div class="panel-handle" id="panelHandle"></div>
+
+    <div id="noSession" class="no-session">
+      <strong>Waiting for SOS…</strong>
+      Share this page with someone who has SafeRoute.<br/>
+      When they trigger SOS, their location appears here in real‑time.
+    </div>
+
+    <div id="sessionInfo" class="hidden">
+      <div class="info-grid">
+        <div class="info-block">
+          <div class="info-label">SESSION</div>
+          <div class="info-value highlight" id="infoSession">—</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">BREADCRUMBS</div>
+          <div class="info-value highlight" id="infoCrumbs">0</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">LAST SEEN</div>
+          <div class="info-value" id="infoLastSeen">—</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">ACCURACY</div>
+          <div class="info-value green" id="infoAccuracy">—</div>
+        </div>
+      </div>
+      <div class="info-label" style="margin-bottom:8px">BREADCRUMB TRAIL</div>
+      <div class="trail-row" id="trailRow"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── CONFIG ──────────────────────────────────────────────
+    const SUPABASE_URL  = 'https://zyhdkxjvsdtwdrqporxd.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5aGRreGp2c2R0d2RycXBvcnhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMDg5ODYsImV4cCI6MjA4Nzc4NDk4Nn0.iHDscPuVNTr0yxbjILlKGsDXjrLJUYvLaa3zVr9gT_k';
+    const TABLE         = 'sos_alerts';
+    const POLL_MS       = 4000; // poll every 4 seconds
+
+    // ── STATE ───────────────────────────────────────────────
+    let sessionId   = null;
+    let crumbs      = [];
+    let map         = null;
+    let markers     = [];
+    let polyline    = null;
+    let liveMarker  = null;
+    let pollTimer   = null;
+    let panelOpen   = true;
+
+    // ── GET SESSION FROM URL ─────────────────────────────────
+    const params = new URLSearchParams(location.search);
+    sessionId = params.get('session') || null;
+
+    // ── MAP INIT ─────────────────────────────────────────────
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 3);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // ── MARKERS ──────────────────────────────────────────────
+    function makeLiveIcon() {
+      return L.divIcon({
+        className: '',
+        html: '<div class="sos-marker-pulse"></div>',
+        iconSize: [20, 20], iconAnchor: [10, 10],
+      });
+    }
+    function makeCrumbIcon() {
+      return L.divIcon({
+        className: '',
+        html: '<div class="crumb-dot"></div>',
+        iconSize: [10, 10], iconAnchor: [5, 5],
+      });
+    }
+
+    // ── FETCH CRUMBS ──────────────────────────────────────────
+    async function fetchCrumbs(sid) {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/${TABLE}?session_id=eq.${sid}&order=created_at.asc`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    // ── FETCH LATEST SESSION (if no session param) ────────────
+    async function fetchLatestSession() {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/${TABLE}?order=created_at.desc&limit=1`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data[0]?.session_id || null;
+    }
+
+    // ── RENDER MAP ────────────────────────────────────────────
+    function renderMap(data) {
+      if (!data.length) return;
+
+      // Clear old markers
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      if (polyline) map.removeLayer(polyline);
+      if (liveMarker) map.removeLayer(liveMarker);
+
+      const latlngs = data.map(d => [d.latitude, d.longitude]);
+
+      // Trail polyline
+      polyline = L.polyline(latlngs, { color: '#ff2d2d', weight: 2, opacity: 0.6, dashArray: '4 6' }).addTo(map);
+
+      // Crumb dots (all except last)
+      data.slice(0, -1).forEach(d => {
+        const m = L.marker([d.latitude, d.longitude], { icon: makeCrumbIcon() }).addTo(map);
+        markers.push(m);
+      });
+
+      // Live pulsing marker (last point)
+      const last = data[data.length - 1];
+      liveMarker = L.marker([last.latitude, last.longitude], { icon: makeLiveIcon() })
+        .bindPopup(`<b style="font-family:monospace">${last.session_id}</b><br/>${last.latitude.toFixed(5)}, ${last.longitude.toFixed(5)}`)
+        .addTo(map);
+      markers.push(liveMarker);
+
+      // Fly to latest
+      map.flyTo([last.latitude, last.longitude], Math.max(map.getZoom(), 15), { duration: 1.5 });
+    }
+
+    // ── UPDATE UI ─────────────────────────────────────────────
+    function updateUI(data) {
+      if (!data.length) return;
+      const last = data[data.length - 1];
+      const badge = document.getElementById('liveBadge');
+      const lastSeen = new Date(last.created_at);
+      const secsAgo = Math.round((Date.now() - lastSeen.getTime()) / 1000);
+      const isLive = secsAgo < 30;
+
+      badge.className = 'live-badge ' + (isLive ? 'live' : 'ended');
+      document.getElementById('liveText').textContent = isLive ? 'LIVE' : 'ENDED';
+
+      document.getElementById('noSession').classList.add('hidden');
+      document.getElementById('sessionInfo').classList.remove('hidden');
+      document.getElementById('infoSession').textContent = data[0].session_id;
+      document.getElementById('infoCrumbs').textContent  = data.length;
+      document.getElementById('infoLastSeen').textContent = secsAgo < 60 ? `${secsAgo}s ago` : lastSeen.toLocaleTimeString();
+      document.getElementById('infoAccuracy').textContent = last.accuracy ? `±${Math.round(last.accuracy)}m` : '—';
+
+      // Trail chips
+      const row = document.getElementById('trailRow');
+      row.innerHTML = [...data].reverse().slice(0, 12).map((d, i) => `
+        <div class="trail-chip ${i===0?'latest':''}">
+          ${i===0?'◉ ':''}${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}
+          <div style="font-size:8px;margin-top:2px;opacity:0.6">${new Date(d.created_at).toLocaleTimeString()}</div>
+        </div>
+      `).join('');
+    }
+
+    // ── POLL LOOP ─────────────────────────────────────────────
+    async function poll() {
+      try {
+        if (!sessionId) {
+          sessionId = await fetchLatestSession();
+          if (!sessionId) return;
+          // Update URL without reload
+          history.replaceState({}, '', `?session=${sessionId}`);
+        }
+        const data = await fetchCrumbs(sessionId);
+        crumbs = data;
+        renderMap(data);
+        updateUI(data);
+      } catch(e) {
+        console.error('[Tracker] Poll error:', e);
+      }
+    }
+
+    // ── PANEL TOGGLE ──────────────────────────────────────────
+    document.getElementById('panelHandle').addEventListener('click', () => {
+      panelOpen = !panelOpen;
+      document.getElementById('infoPanel').classList.toggle('hidden-panel', !panelOpen);
+    });
+
+    // ── INIT ──────────────────────────────────────────────────
+    poll();
+    pollTimer = setInterval(poll, POLL_MS);
+  </script>
+</body>
+</html>
