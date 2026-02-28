@@ -9,6 +9,7 @@
   <title>SafeRoute — Emergency SOS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -76,13 +77,15 @@
       <div class="progress-bar-wrap">
         <div class="progress-bar-fill" id="progressFill"></div>
       </div>
+      <div class="reason-display" id="reasonDisplay"></div>
       <div class="crumb-meta">
         <div class="crumb-count">
           <span class="crumb-icon">◉</span>
           <span id="crumbCount">0</span> breadcrumbs sent
         </div>
-        <button class="share-link-btn" id="shareLinkBtn">📤 Share Tracker Link</button>
+        <button class="share-link-btn" id="shareLinkBtn">📤 Share Tracker</button>
       </div>
+      <div class="notif-log" id="notifLog"></div>
     </div>
 
     <!-- Contacts -->
@@ -108,16 +111,36 @@
     <div class="session-id-display">SESSION <span id="sessionIdDisplay">—</span></div>
   </div>
 
+  <!-- Reason Picker Modal -->
+  <div class="modal-overlay hidden" id="reasonOverlay">
+    <div class="modal reason-modal">
+      <div class="modal-title">⚠️ WHY ARE YOU SENDING THIS ALERT?</div>
+      <div class="reason-grid">
+        <button class="reason-btn" data-reason="🆘 I am in serious danger!">🆘 Serious Danger</button>
+        <button class="reason-btn" data-reason="😰 I might be in trouble">😰 Might Be Trouble</button>
+        <button class="reason-btn" data-reason="🚨 I need help urgently">🚨 Need Help Now</button>
+        <button class="reason-btn" data-reason="✅ I am safe, sharing location">✅ I Am Safe</button>
+        <button class="reason-btn" data-reason="📍 Just sharing my location">📍 Sharing Location</button>
+        <button class="reason-btn" data-reason="🏥 I need medical help">🏥 Medical Help</button>
+      </div>
+      <input class="modal-input" type="text" id="customReason" placeholder="Or type a custom message… (optional)" maxlength="120" style="margin-top:12px" />
+      <div class="modal-actions" style="margin-top:12px">
+        <button class="modal-btn cancel" id="reasonCancel">CANCEL</button>
+        <button class="modal-btn confirm" id="reasonConfirm">ACTIVATE SOS →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Contact Modal -->
   <div class="modal-overlay hidden" id="modalOverlay">
     <div class="modal">
       <div class="modal-title">ADD EMERGENCY CONTACT</div>
-      <input class="modal-input" type="text" id="contactName" placeholder="Name" />
-      <input class="modal-input" type="tel" id="contactPhone" placeholder="Phone Number" />
-      <input class="modal-input" type="email" id="contactEmail" placeholder="Email (optional)" />
+      <input class="modal-input" type="text"  id="contactName"  placeholder="Full Name" />
+      <input class="modal-input" type="tel"   id="contactPhone" placeholder="Phone with country code e.g. +919876543210" />
+      <input class="modal-input" type="email" id="contactEmail" placeholder="Email address (for auto-notification)" />
       <div class="modal-actions">
-        <button class="modal-btn cancel" id="modalCancel">CANCEL</button>
-        <button class="modal-btn confirm" id="modalConfirm">SAVE</button>
+        <button class="modal-btn cancel"  id="modalCancel">CANCEL</button>
+        <button class="modal-btn confirm" id="modalConfirm">SAVE CONTACT</button>
       </div>
     </div>
   </div>

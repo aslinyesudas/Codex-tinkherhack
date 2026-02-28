@@ -1,12 +1,10 @@
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/tracker"
+  to   = "/tracker.html"
   status = 200
-  force = false
 
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
     Permissions-Policy = "geolocation=*"
+    X-Frame-Options    = "SAMEORIGIN"
