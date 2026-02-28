@@ -115,17 +115,21 @@ GRANT SELECT, INSERT ON sos_alerts TO anon;
 
 #### Screenshots (Add at least 3)
 
-![Screenshot1](screenshots/sos-screen.png)
+
+![WhatsApp Image 2026-02-28 at 6 44 39 PM](https://github.com/user-attachments/assets/7ad78f0a-3ef8-4347-8adf-34e918cf5ada)
 *Main SOS screen — hold the red button for 2 seconds to activate emergency broadcast*
 
-![Screenshot2](screenshots/reason-picker.png)
+![1](https://github.com/user-attachments/assets/c7364779-8ea2-49aa-b065-7de8a17df5fa)
+
 *Reason picker popup — select why you're sending the alert or type a custom message*
 
-![Screenshot3](screenshots/live-tracker.png)
+<img width="1918" height="927" alt="Screenshot 2026-02-28 184346" src="https://github.com/user-attachments/assets/8eb019a4-753c-42a1-a81a-b098e180d0ba" />
+
 *Family tracker map — live GPS position with breadcrumb trail, auto-refreshes every 4 seconds*
 
-![Screenshot4](screenshots/broadcasting.png)
-*Active broadcasting state — 60-second countdown, breadcrumb count, contact notification status*
+
+*Ac![2](https://github.com/user-attachments/assets/3d674b56-cad5-4d68-ab9e-609e23cdd3dd)
+live broadcasting state — 60-second countdown, breadcrumb count, contact notification status*
 
 #### Diagrams
 
