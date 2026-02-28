@@ -285,13 +285,13 @@
       const badge = document.getElementById('liveBadge');
       const lastSeen = new Date(last.created_at);
       const secsAgo = Math.round((Date.now() - lastSeen.getTime()) / 1000);
-      const isLive = secsAgo < 30;
+      const isLive = secsAgo < 300;
 
       badge.className = 'live-badge ' + (isLive ? 'live' : 'ended');
       document.getElementById('liveText').textContent = isLive ? 'LIVE' : 'ENDED';
 
-      document.getElementById('noSession').classList.add('hidden');
-      document.getElementById('sessionInfo').classList.remove('hidden');
+      document.getElementById('noSession').style.display = 'none';
+      document.getElementById('sessionInfo').style.display = 'block';
       document.getElementById('infoSession').textContent = data[0].session_id;
       document.getElementById('infoCrumbs').textContent  = data.length;
       document.getElementById('infoLastSeen').textContent = secsAgo < 60 ? `${secsAgo}s ago` : lastSeen.toLocaleTimeString();
